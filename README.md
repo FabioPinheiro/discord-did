@@ -55,7 +55,7 @@ sbt scalafmtCheck
 
 ### Components
 
-**Main Application** (`src/main/scala/Main.scala`)
+**Main Application** (`src/main/scala/fmgp/did/discord/Main.scala`)
 - `DiscordDID`: ZIO application entry point, initializes DID agent and Discord bot
 - `SlashCommandListener`: Handles Discord slash commands and authentication flow
 - `MessageReceiveListener`: Logs received messages
@@ -83,6 +83,8 @@ The bot uses a DID Peer 4 agent with:
 ### Available Commands
 
 - `/login` - Start authentication flow with QR code
+- `/info` - Show information about the bot's DID agent
+- `/trust-ping` - Send a Trust Ping message to a DID
 - `/say` - Echo command (testing)
 - `/db` - Show in-memory database (debug only)
 - `/leave` - Make bot leave server (admin)
@@ -95,6 +97,50 @@ The project uses:
 - JitPack resolver for custom dependencies
 - scala-did modules: did, did-imp, did-comm-protocols, did-method-prism, did-method-peer
 - `MultiFallbackResolver` with `DidPeerResolver` for DID resolution
+
+## Inviting the Bot to Your Discord Server
+
+To add this bot to your Discord server, you need to generate an invite URL with the appropriate permissions.
+
+### Required Scopes:
+- `bot` - To add the bot to servers
+- `applications.commands` - For slash commands
+
+### Required Permissions:
+The bot needs the following permissions to function properly:
+- **Send Messages** - Reply to slash commands
+- **Embed Links** - Send embeds (login, info, trust-ping commands)
+- **Attach Files** - Upload QR codes (login command)
+
+### Generate Invite URL
+
+**Option 1: Use This URL Template**
+
+Replace `YOUR_CLIENT_ID` with your bot's Application ID (found in Discord Developer Portal):
+
+```
+https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=51200&integration_type=0&scope=bot+applications.commands
+```
+
+Permission value `52224` includes:
+- Send Messages (2048)
+- Embed Links (16384)
+- Attach Files (32768)
+
+**Option 2: Use Discord Developer Portal**
+
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Select your application
+3. Navigate to **OAuth2** → **URL Generator**
+4. Select **Scopes**:
+   - ☑️ `bot`
+   - ☑️ `applications.commands`
+5. Select **Bot Permissions**:
+   - ☑️ Send Messages
+   - ☑️ Embed Links
+   - ☑️ Attach Files
+6. Copy the generated URL at the bottom
+   - Ex `https://discord.com/oauth2/authorize?client_id=1170442329883168788&permissions=51200&integration_type=0&scope=bot+applications.commands`
 
 ## Important Notes
 
