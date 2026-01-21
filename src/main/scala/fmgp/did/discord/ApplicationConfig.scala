@@ -27,7 +27,7 @@ object ConfigDiscord {
   def didPrism: DIDSubject = ???
 }
 
-object CurveConfig:
+object CurveConfig {
 
   // Config for OKPCurve union type
   given okpCurveConfig: Config[OKPCurve] =
@@ -47,6 +47,7 @@ object CurveConfig:
         Left(
           Config.Error.InvalidData(message = s"Invalid EC curve: $other. Expected P-256, P-384, P-521, or secp256k1")
         )
+}
 
 import CurveConfig.given
 

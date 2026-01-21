@@ -8,9 +8,7 @@ import scala.jdk.CollectionConverters.*
 import fmgp.crypto.*
 import fmgp.did.method.peer.*
 import fmgp.crypto.OKPPrivateKeyWithKid
-import fmgp.did.discord.VCModels.*
 import fmgp.did.discord.BotCommands.*
-import fmgp.did.discord.BotCommandsPoH.*
 
 import net.dv8tion.jda.api.JDABuilder
 import java.util.EnumSet
@@ -55,7 +53,7 @@ import zio.config.typesafe.*
 //   }
 // }
 
-//https://github.com/bbarker/diz/blob/main/src/main/scala/Main.scala
+//Discord example https://github.com/bbarker/diz/blob/main/src/main/scala/Main.scala
 object DiscordDID extends ZIOAppDefault {
   val token = "MTE3MDQ0MjMyOTg4MzE2ODc4OA.GSVRDi.IMZNQo1TgcF7n5jG3YV7TH8OqaWZbisN-0r4YU" // DID
   // val token = "ODEwNjAwNTk5OTg0NjY4NzEz.Gn7Qu_.qvz0_FqLRhiQIEW0npnaHdMvonmyzI3Ayqgqu8" // GH3
@@ -94,12 +92,18 @@ object DiscordDID extends ZIOAppDefault {
             .slash("say", "Makes the bot say what you tell it to")
             .addOption(OptionType.STRING, "content", "What the bot should say", true), // Accepting a user input
           Commands.slash("login", "Login with DID"),
-          Commands.slash("verify", "Verify your Proof of Humanity credential"),
-          Commands
-            .slash("submit-vc", "Submit VC for verification (temporary)")
-            .addOption(OptionType.STRING, "credential", "JWT VC string", true),
-          Commands.slash("verify-status", "Check your verification status"),
+          // Commands.slash("verify", "Verify your Proof of Humanity credential"),
+          // Commands
+          //   .slash("submit-vc", "Submit VC for verification (temporary)")
+          //   .addOption(OptionType.STRING, "credential", "JWT VC string", true),
+          // Commands.slash("verify-status", "Check your verification status"),
           Commands.slash("info", "Show information about the Verifier agent"),
+          Commands
+            .slash("trust-ping", "Send a Trust Ping to a DID")
+            .addOption(OptionType.STRING, "did", "The DID to ping", true),
+          Commands
+            .slash("resolve-did", "Resolve a DID to its DID Document")
+            .addOption(OptionType.STRING, "did", "The DID to resolve", true),
           Commands.slash("db", "SHOW DB"), // TODO REMOVE
           Commands
             .slash("leave", "Makes the bot leave the server")
@@ -149,7 +153,6 @@ class SlashCommandListener(
   } yield multiResolver
 
   var DB = Seq.empty[User]
-  var VerifiedDB = Seq.empty[VerificationRecord]
 
   override def onSlashCommandInteraction(event: SlashCommandInteractionEvent): Unit = {
     event.getName() match {
@@ -165,6 +168,12 @@ class SlashCommandListener(
 
       case "db" =>
         handleDbCommand(event, DB)
+
+      case "trust-ping" =>
+        handleTrustPingCommand(event, agent)
+
+      case "resolve-did" =>
+        handleResolveDIDCommand(event, makeResolver)
 
       case "leave" =>
         handleLeaveCommand(event)

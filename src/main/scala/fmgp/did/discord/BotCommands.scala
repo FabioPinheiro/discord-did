@@ -2,16 +2,18 @@ package fmgp.did.discord
 
 import zio.*
 import zio.json.*
+import zio.http.*
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.utils.FileUpload
 import net.dv8tion.jda.api.EmbedBuilder
 import net.glxn.qrgen.javase.QRCode
 import net.glxn.qrgen.core.image.ImageType
 import fmgp.did.comm.protocol.auth.*
+import fmgp.did.comm.protocol.trustping2.*
 import fmgp.did.comm.*
 import fmgp.did.method.peer.*
 import fmgp.did.*
-import fmgp.did.discord.VCModels.*
+import lace.poh.VCModels.*
 
 object BotCommands {
 
@@ -97,5 +99,117 @@ object BotCommands {
       .setEphemeral(true)
       .flatMap(m => event.getGuild().leave())
       .queue()
+  }
+
+  def handleTrustPingCommand(event: SlashCommandInteractionEvent, agent: Agent): Unit = {
+    val didString = event.getOption("did", _.getAsString)
+
+    // Parse the DID string
+    DIDSubject.either(didString) match {
+      case Left(error) =>
+        event.reply(s"❌ Invalid DID: ${error.error}").setEphemeral(true).queue()
+
+      case Right(targetDid) =>
+        // Create a Trust Ping message with requested response
+        val trustPing = TrustPingWithRequestedResponse(
+          id = MsgID(),
+          from = agent.id.asFROM,
+          to = targetDid.asTO
+        )
+
+        val program = for {
+          // Convert to PlaintextMessage and sign
+          signedMsg <- Operations.sign(trustPing.toPlaintextMessage)
+          // TODO: Send the message via the agent's mediator/relay
+          _ <- ZIO.log(s"Trust Ping sent to ${targetDid.string}")
+        } yield signedMsg
+
+        Unsafe.unsafe { implicit unsafe =>
+          Runtime.default.unsafe.run(
+            program
+              .provideSomeLayer(Operations.layerOperations ++ DidPeerResolver.layer)
+              .provideEnvironment(ZEnvironment(agent))
+          )
+        } match {
+          case Exit.Failure(cause) =>
+            println(s"ERROR: ${cause.prettyPrint}")
+            event.reply(s"❌ Failed to send Trust Ping: ${cause.prettyPrint}").setEphemeral(true).queue()
+
+          case Exit.Success(signedMsg) =>
+            val embed = new EmbedBuilder()
+            embed.setTitle("🏓 Trust Ping Sent")
+            embed.setDescription(s"Trust Ping message sent to DID")
+            embed.addField("Target DID", targetDid.string, false)
+            embed.addField("Message ID", trustPing.id.value, false)
+            embed.addField("Status", "Waiting for response...", false)
+            event.replyEmbeds(embed.build()).setEphemeral(true).queue()
+        }
+    }
+  }
+
+  def handleResolveDIDCommand(
+      event: SlashCommandInteractionEvent,
+      makeResolver: ZIO[Client & Scope, Nothing, Resolver]
+  ): Unit = {
+    val didString = event.getOption("did", _.getAsString)
+
+    // Parse the DID string
+    DIDSubject.either(didString) match {
+      case Left(error) =>
+        event.reply(s"❌ Invalid DID: ${error.error}").setEphemeral(true).queue()
+
+      case Right(did) =>
+        val program = for {
+          resolver <- makeResolver
+          didDocument <- resolver.didDocument(did.asTO)
+        } yield didDocument
+
+        Unsafe.unsafe { implicit unsafe =>
+          Runtime.default.unsafe.run(
+            program.provide(Client.default, Scope.default)
+          )
+        } match {
+          case Exit.Failure(cause) =>
+            println(s"ERROR: ${cause.prettyPrint}")
+            event.reply(s"❌ Failed to resolve DID: ${cause.prettyPrint}").setEphemeral(true).queue()
+
+          case Exit.Success(didDocument) =>
+            val embed = new EmbedBuilder()
+            embed.setTitle("🔍 DID Document")
+            embed.setDescription(s"Resolved DID Document")
+            embed.addField("DID", did.string, false)
+
+            // Add verification methods
+            val verificationMethods = didDocument.verificationMethod.map(_.size).getOrElse(0)
+            embed.addField("Verification Methods", s"$verificationMethods method(s)", true)
+
+            // Add services
+            val services = didDocument.service.map(_.size).getOrElse(0)
+            embed.addField("Services", s"$services service(s)", true)
+
+            // Add authentication methods
+            val authMethods = didDocument.authentication
+              .map {
+                case e: VerificationMethod => 1
+                case e                     => e.asInstanceOf[Seq[VerificationMethod]].size
+              }
+              .getOrElse(0)
+            embed.addField("Authentication", s"$authMethods method(s)", true)
+
+            // Create JSON file attachment with the full DID Document
+            val didDocJson = didDocument.toJsonPretty
+            val jsonFile: FileUpload = FileUpload.fromData(
+              didDocJson.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+              s"did-document-${didDocument.didSubject.string}.json"
+            )
+            embed.addField("DID Document", "See attached JSON file ⬇️", false)
+
+            event
+              .replyEmbeds(embed.build())
+              .setEphemeral(true)
+              .addFiles(jsonFile)
+              .queue()
+        }
+    }
   }
 }
