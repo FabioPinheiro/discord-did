@@ -1,0 +1,44 @@
+# macOS
+.DS_Store
+
+# IDEA
+.idea
+.idea_modules
+/.worksheet/
+
+
+.bloop/
+.metals/
+.bsp/
+.vscode/
+project/metals.sbt
+project/project/
+target/
+node_modules/
+dist/
+
+**/yarn.lock
+
+## igone the demo (generated code)
+docs-build/**
+
+## Do not lock the RUST examples dependencies
+**/Cargo.lock
+
+## igone(generated files)
+.*.swn
+.*.swo
+.*.swp
+.~*
+*.bak
+*.log
+*.pid
+*.semanticdb
+*.tmp
+~*
+
+#vite 
+vite/dev-dist/
+
+#lixo
+lixo
