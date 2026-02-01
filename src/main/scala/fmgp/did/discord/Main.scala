@@ -12,71 +12,39 @@ import fmgp.did.discord.BotCommands.*
 
 import net.dv8tion.jda.api.JDABuilder
 import java.util.EnumSet
-import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
-import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.build.Commands
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.InteractionContextType
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions
 import net.dv8tion.jda.api.components.container.*
-
-import net.dv8tion.jda.api.components.section.Section
-import net.dv8tion.jda.api.components.thumbnail.Thumbnail
-import net.dv8tion.jda.api.components.textdisplay.TextDisplay
-import net.dv8tion.jda.api.components.separator.Separator
-import net.dv8tion.jda.api.components.actionrow.ActionRow
-import net.dv8tion.jda.api.components.selections.StringSelectMenu
-import net.dv8tion.jda.api.components.filedisplay.FileDisplay
 import net.dv8tion.jda.api.utils.FileUpload
-import java.nio.charset.StandardCharsets
 import net.dv8tion.jda.api.components.mediagallery.MediaGallery
 import net.dv8tion.jda.api.components.mediagallery.MediaGalleryItem
+import net.glxn.qrgen.core.image.ImageType
 import net.glxn.qrgen.javase.QRCode
 import net.dv8tion.jda.api.EmbedBuilder
+
+import java.nio.charset.StandardCharsets
 import scala.compiletime.ops.boolean
-import net.glxn.qrgen.core.image.ImageType
 import fmgp.did.Agent
+import fmgp.did.framework.TransportFactoryImp
 
 import zio.config.*
 import zio.config.magnolia.*
 import zio.config.typesafe.*
-
-// @main def hello(): Unit = {
-//   println("Hello world!")
-//   val qrCode = QrCode.encodeText("https://www.scala-lang.org/", Ecc.LOW)
-
-//   qrCode.foreach { line =>
-//     println(line.map(x => if (x) "\u2588" else " ").mkString)
-//   }
-// }
+import fmgp.did.comm.*
 
 //Discord example https://github.com/bbarker/diz/blob/main/src/main/scala/Main.scala
 object DiscordDID extends ZIOAppDefault {
   val token = "MTE3MDQ0MjMyOTg4MzE2ODc4OA.GSVRDi.IMZNQo1TgcF7n5jG3YV7TH8OqaWZbisN-0r4YU" // DID
   // val token = "ODEwNjAwNTk5OTg0NjY4NzEz.Gn7Qu_.qvz0_FqLRhiQIEW0npnaHdMvonmyzI3Ayqgqu8" // GH3
 
-  val bot =
+  def botDiscordProgram =
     for {
-      _ <- Console.printLine( // https://patorjk.com/software/taag/#p=display&f=ANSI+Shadow&t=AUTH-BOT
-        """ █████╗ ██╗   ██╗████████╗██╗  ██╗      ██████╗  ██████╗ ████████╗
-          |██╔══██╗██║   ██║╚══██╔══╝██║  ██║      ██╔══██╗██╔═══██╗╚══██╔══╝
-          |███████║██║   ██║   ██║   ███████║█████╗██████╔╝██║   ██║   ██║   
-          |██╔══██║██║   ██║   ██║   ██╔══██║╚════╝██╔══██╗██║   ██║   ██║   
-          |██║  ██║╚██████╔╝   ██║   ██║  ██║      ██████╔╝╚██████╔╝   ██║   
-          |╚═╝  ╚═╝ ╚═════╝    ╚═╝   ╚═╝  ╚═╝      ╚═════╝  ╚═════╝    ╚═╝   
-          |
-          |Visit: https://github.com/FabioPinheiro/discord-did""".stripMargin
-      )
-      configs = ConfigProvider.fromResourcePath()
-
-      applicationConfig <- ZIO.config(ApplicationConfig.config.nested("identity")).provideLayer(ZLayer.succeed(configs))
-      _ <- ZIO.debug(s"Application started")
-      _ <- ZIO.log(s"Application Config: ${applicationConfig}")
-      agent = applicationConfig.applicationAgent
-
+      agent <- ZIO.service[ApplicationAgent]
       jda <- ZIO.succeed {
         JDABuilder
           .createLight(token, Seq().asJava) // EnumSet.of(GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT))
@@ -92,11 +60,6 @@ object DiscordDID extends ZIOAppDefault {
             .slash("say", "Makes the bot say what you tell it to")
             .addOption(OptionType.STRING, "content", "What the bot should say", true), // Accepting a user input
           Commands.slash("login", "Login with DID"),
-          // Commands.slash("verify", "Verify your Proof of Humanity credential"),
-          // Commands
-          //   .slash("submit-vc", "Submit VC for verification (temporary)")
-          //   .addOption(OptionType.STRING, "credential", "JWT VC string", true),
-          // Commands.slash("verify-status", "Check your verification status"),
           Commands.slash("info", "Show information about the Verifier agent"),
           Commands
             .slash("trust-ping", "Send a Trust Ping to a DID")
@@ -112,18 +75,74 @@ object DiscordDID extends ZIOAppDefault {
         )
         commandListUpdateAction.complete().asScala
       }
-      _ <- Console.readLine("Enter to Shutdown")
-      _ = jda.shutdown()
-      _ <- ZIO.debug(s"Await Shutdown")
-      _ = jda.awaitShutdown()
-      _ <- ZIO.debug(s"Application Ended")
-    } yield ()
+    } yield jda
+
+  def botAgentProgram(port: Int) = for {
+    _ <- ZIO.log(s"Bot Agent Program Started (on port $port)")
+
+    // a = ??? : ZLayer[Any, Nothing, fmgp.did.framework.Operator]
+    // b = ??? : ZLayer[Any, Nothing, fmgp.did.comm.Operations]
+
+    myServer <- Server
+      .serve((BotDidAgent.didCommApp ++ DIDCommRoutes.app) @@ (Middleware.cors))
+      // .serve((BotDidAgent.didCommApp) @@ (Middleware.cors))
+      .provideSomeLayer(DidPeerResolver.layerDidPeerResolver)
+      .provideSomeLayer(Server.defaultWithPort(port))
+      .debug
+      .fork
+
+    // _ <- myServer.join *> ZIO.log(s"Bot Agent Program End")
+    // _ <- ZIO.log(s"*" * 100)
+
+  } yield (myServer)
 
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
     Runtime.setConfigProvider(ConfigProvider.fromResourcePath())
   //   Runtime.removeDefaultLoggers >>> SLF4J.slf4j(mediatorColorFormat)
 
-  override def run = bot // .provide(AppConfig.layer, DBConfig.layer, ServerConfig.layer)
+  override def run =
+    for {
+      _ <- Console.printLine( // https://patorjk.com/software/taag/#p=display&f=ANSI+Shadow&t=AUTH-BOT
+        """ █████╗ ██╗   ██╗████████╗██╗  ██╗      ██████╗  ██████╗ ████████╗
+          |██╔══██╗██║   ██║╚══██╔══╝██║  ██║      ██╔══██╗██╔═══██╗╚══██╔══╝
+          |███████║██║   ██║   ██║   ███████║█████╗██████╔╝██║   ██║   ██║   
+          |██╔══██║██║   ██║   ██║   ██╔══██║╚════╝██╔══██╗██║   ██║   ██║   
+          |██║  ██║╚██████╔╝   ██║   ██║  ██║      ██████╔╝╚██████╔╝   ██║   
+          |╚═╝  ╚═╝ ╚═════╝    ╚═╝   ╚═╝  ╚═╝      ╚═════╝  ╚═════╝    ╚═╝   
+          |
+          |Visit: https://github.com/FabioPinheiro/discord-did""".stripMargin
+      )
+      configs = ConfigProvider.fromResourcePath()
+
+      applicationConfig <- ZIO.config(ApplicationConfig.config.nested("identity")).provideLayer(ZLayer.succeed(configs))
+      port <- configs.nested("http").nested("server").load(Config.int("port"))
+
+      _ <- ZIO.log(s"Application started")
+      _ <- ZIO.log(s"Application Config: ${applicationConfig}")
+      agent = applicationConfig.applicationAgent
+      transportFactory = Client.default >>> TransportFactoryImp.layer
+      botAgent = BotDidAgent(applicationConfig.did, applicationConfig.keyStore)
+      botAgentLayer = ZLayer(ZIO.succeed(botAgent))
+
+      myServer <- botAgentProgram(port)
+        .provideSomeLayer(Scope.default >>> ((botAgentLayer ++ transportFactory) >>> OperatorImp.layer))
+        .provideSomeLayer(Operations.layerOperations ++ botAgentLayer)
+
+      jda <- botDiscordProgram.provideEnvironment(ZEnvironment(agent))
+
+      // ### Shutdown ###
+      _ <- Console.readLine("Enter to Shutdown")
+
+      // Discord Bot
+      _ = jda.shutdown()
+      // HTTP Server
+      exitServer <- myServer.interrupt.delay(2.seconds) *> ZIO.log(s"Server stop")
+
+      _ <- ZIO.debug(s"Await Shutdown")
+      _ = jda.awaitShutdown()
+      _ <- myServer.join
+      _ <- ZIO.debug(s"Application Ended")
+    } yield ()
 }
 
 class MessageReceiveListener extends ListenerAdapter {

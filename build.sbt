@@ -69,7 +69,7 @@ lazy val D = new {
   val qrcode = Def.setting("com.github.kenglxn.QRGen" % "javase" % "3.0.1")
   val did = Def.setting("app.fmgp" %% "did" % V.scalaDID)
   val didImp = Def.setting("app.fmgp" %% "did-imp" % V.scalaDID)
-
+  val didFramework = Def.setting("app.fmgp" %% "did-framework" % V.scalaDID)
   // val didUniresolver = Def.setting("app.fmgp" %% "did-uniresolver" % V.scalaDID)
   val didProtocols = Def.setting("app.fmgp" %% "did-comm-protocols" % V.scalaDID)
   val didPrism = Def.setting("app.fmgp" %% "did-method-prism" % V.scalaDID)
@@ -90,6 +90,7 @@ lazy val root = project
       D.zioConfigTypesafe.value,
       D.did.value,
       D.didImp.value,
+      D.didFramework.value,
       // D.didUniresolver.value,
       D.didProtocols.value,
       D.didPrism.value,
