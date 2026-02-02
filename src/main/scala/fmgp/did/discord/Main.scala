@@ -114,7 +114,9 @@ object DiscordDID extends ZIOAppDefault {
       )
       configs = ConfigProvider.fromResourcePath()
 
-      applicationConfig <- ZIO.config(ApplicationConfig.config.nested("identity")).provideLayer(ZLayer.succeed(configs))
+      applicationConfig <- ZIO
+        .config(ApplicationConfig.configAgent.nested("identity"))
+        .provideLayer(ZLayer.succeed(configs))
       port <- configs.nested("http").nested("server").load(Config.int("port"))
 
       _ <- ZIO.log(s"Application started")
