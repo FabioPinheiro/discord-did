@@ -2,7 +2,7 @@ package fmgp.did.discord
 
 import fmgp.did.*
 import fmgp.crypto.*
-import zio.ZIO
+import zio.*
 
 case class ApplicationAgent(
     override val id: DID,

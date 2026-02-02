@@ -13,7 +13,6 @@ import fmgp.did.comm.protocol.trustping2.*
 import fmgp.did.comm.*
 import fmgp.did.method.peer.*
 import fmgp.did.*
-import lace.poh.VCModels.*
 
 object BotCommands {
 
