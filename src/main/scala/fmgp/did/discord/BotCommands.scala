@@ -148,67 +148,65 @@ object BotCommands {
 
   def handleResolveDIDCommand(
       event: SlashCommandInteractionEvent,
-      makeResolver: ZIO[Client & Scope, Nothing, Resolver]
-  ): Unit = {
+  ): ZIO[Resolver, Nothing, Unit] = {
     val didString = event.getOption("did", _.getAsString)
 
     // Parse the DID string
     DIDSubject.either(didString) match {
       case Left(error) =>
-        event.reply(s"❌ Invalid DID: ${error.error}").setEphemeral(true).queue()
-
+        ZIO.succeed(
+          event.reply(s"❌ Invalid DID: ${error.error}").setEphemeral(true).queue()
+        )
       case Right(did) =>
-        val program = for {
-          resolver <- makeResolver
-          didDocument <- resolver.didDocument(did.asTO)
-        } yield didDocument
+        {
+          for {
+            resolver <- ZIO.service[Resolver]
+            didDocument <- resolver
+              .didDocument(did.asTO)
+            _ = {
+              val embed = new EmbedBuilder()
+              embed.setTitle("🔍 DID Document")
+              embed.setDescription(s"Resolved DID Document")
+              embed.addField("DID", did.string, false)
 
-        Unsafe.unsafe { implicit unsafe =>
-          Runtime.default.unsafe.run(
-            program.provide(Client.default, Scope.default)
-          )
-        } match {
-          case Exit.Failure(cause) =>
-            println(s"ERROR: ${cause.prettyPrint}")
-            event.reply(s"❌ Failed to resolve DID: ${cause.prettyPrint}").setEphemeral(true).queue()
+              // Add verification methods
+              val verificationMethods = didDocument.verificationMethod.map(_.size).getOrElse(0)
+              embed.addField("Verification Methods", s"$verificationMethods method(s)", true)
 
-          case Exit.Success(didDocument) =>
-            val embed = new EmbedBuilder()
-            embed.setTitle("🔍 DID Document")
-            embed.setDescription(s"Resolved DID Document")
-            embed.addField("DID", did.string, false)
+              // Add services
+              val services = didDocument.service.map(_.size).getOrElse(0)
+              embed.addField("Services", s"$services service(s)", true)
 
-            // Add verification methods
-            val verificationMethods = didDocument.verificationMethod.map(_.size).getOrElse(0)
-            embed.addField("Verification Methods", s"$verificationMethods method(s)", true)
+              // Add authentication methods
+              val authMethods = didDocument.authentication
+                .map {
+                  case e: VerificationMethod => 1
+                  case e                     => e.asInstanceOf[Seq[VerificationMethod]].size
+                }
+                .getOrElse(0)
+              embed.addField("Authentication", s"$authMethods method(s)", true)
 
-            // Add services
-            val services = didDocument.service.map(_.size).getOrElse(0)
-            embed.addField("Services", s"$services service(s)", true)
+              // Create JSON file attachment with the full DID Document
+              val didDocJson = didDocument.toJsonPretty
+              val jsonFile: FileUpload = FileUpload.fromData(
+                didDocJson.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                s"did-document-${didDocument.didSubject.string}.json"
+              )
+              embed.addField("DID Document", "See attached JSON file ⬇️", false)
 
-            // Add authentication methods
-            val authMethods = didDocument.authentication
-              .map {
-                case e: VerificationMethod => 1
-                case e                     => e.asInstanceOf[Seq[VerificationMethod]].size
-              }
-              .getOrElse(0)
-            embed.addField("Authentication", s"$authMethods method(s)", true)
-
-            // Create JSON file attachment with the full DID Document
-            val didDocJson = didDocument.toJsonPretty
-            val jsonFile: FileUpload = FileUpload.fromData(
-              didDocJson.getBytes(java.nio.charset.StandardCharsets.UTF_8),
-              s"did-document-${didDocument.didSubject.string}.json"
-            )
-            embed.addField("DID Document", "See attached JSON file ⬇️", false)
-
-            event
-              .replyEmbeds(embed.build())
-              .setEphemeral(true)
-              .addFiles(jsonFile)
-              .queue()
+              event
+                .replyEmbeds(embed.build())
+                .setEphemeral(true)
+                .addFiles(jsonFile)
+                .queue()
+            }
+          } yield ()
         }
+          .catchAll { error =>
+            ZIO.succeed(
+              event.reply(s"❌ Failed to resolve DID: ${error}").setEphemeral(true).queue()
+            )
+          }
     }
   }
 }

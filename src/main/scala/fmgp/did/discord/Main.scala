@@ -176,31 +176,41 @@ class SlashCommandListener(
   var DB = Seq.empty[User]
 
   override def onSlashCommandInteraction(event: SlashCommandInteractionEvent): Unit = {
-    event.getName() match {
-      case "say" =>
-        handleSayCommand(event)
+    Unsafe.unsafe { implicit unsafe =>
+      Runtime.default.unsafe
+        .run {
+          ZIO.log(s"COMMAND /${event.getName()}") *> {
+            event.getName() match {
+              case "say" =>
+                ZIO.succeed(handleSayCommand(event))
 
-      case "login" =>
-        val (updatedDB, _) = handleLoginCommand(event, agent, DB)
-        DB = updatedDB
+              case "login" =>
+                val (updatedDB, _) = handleLoginCommand(event, agent, DB)
+                DB = updatedDB
+                ZIO.unit
 
-      case "info" =>
-        handleInfoCommand(event, agent)
+              case "info" =>
+                ZIO.succeed(handleInfoCommand(event, agent))
 
-      case "db" =>
-        handleDbCommand(event, DB)
+              case "db" =>
+                ZIO.succeed(handleDbCommand(event, DB))
 
-      case "trust-ping" =>
-        handleTrustPingCommand(event, agent)
+              case "trust-ping" =>
+                ZIO.succeed(handleTrustPingCommand(event, agent))
 
-      case "resolve-did" =>
-        handleResolveDIDCommand(event, makeResolver)
+              case "resolve-did" =>
+                handleResolveDIDCommand(event)
+                  .provideSomeLayer(Utils.resolverLayer ++ Operations.layerOperations)
 
-      case "leave" =>
-        handleLeaveCommand(event)
+              case "leave" =>
+                ZIO.succeed(handleLeaveCommand(event))
 
-      case any =>
-        println(s"ANY: $any")
+              case any =>
+                ZIO.succeed(println(s"ANY: $any"))
+            }
+
+          }
+        }
     }
   }
 }
