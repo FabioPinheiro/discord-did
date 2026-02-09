@@ -2,23 +2,23 @@ name: CI
 run-name: CI on ${{ github.ref_name }}
 
 on:
-  workflow_dispatch:
-    inputs:
-      make_snapshot_release:
-        description: "Publish libraries's SNAPSHOT"
-        default: false
-        type: boolean
-        required: false
-      force_deploy_ghpages:
-        description: "Force deploy gb-pages"
-        default: false
-        type: boolean
-        required: false
+  # workflow_dispatch:
+  #   inputs:
+  #     make_snapshot_release:
+  #       description: "Publish libraries's SNAPSHOT"
+  #       default: false
+  #       type: boolean
+  #       required: false
+  #     force_deploy_ghpages:
+  #       description: "Force deploy gb-pages"
+  #       default: false
+  #       type: boolean
+  #       required: false
   pull_request:
     branches-ignore:
       - "gh-pages"
   push:
-    branches: [master]
+    branches: [master, main]
     tags: ["v*"]
 
 jobs:

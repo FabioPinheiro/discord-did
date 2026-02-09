@@ -1,7 +1,7 @@
 // val scala3Version = "3.7.2"
 inThisBuild(
   Seq(
-    scalaVersion := "3.3.6", // Also update docs/publishWebsite.sh and any ref to scala-3.3.6
+    scalaVersion := "3.3.7", // Also update docs/publishWebsite.sh and any ref to scala-3.3.6
   )
 )
 
@@ -53,10 +53,10 @@ inThisBuild(
 lazy val V = new {
   val scalajsJavaSecureRandom = "1.0.0"
   val munit = "1.1.1"
-  val zio = "2.1.20"
+  val zio = "2.1.24"
   val zioHttp = "3.4.1"
   val zioConfig = "4.0.6"
-  val jda = "6.0.0-rc.2" // "5.6.1"
+  val jda = "6.0.0" // "5.6.1"
   val scalaDID = "0.1.0-M35"
 }
 lazy val D = new {
@@ -96,6 +96,6 @@ lazy val root = project
       D.didPrism.value,
       D.didPeer.value,
     ),
-    libraryDependencies += "org.scalameta" %% "munit" % "1.0.0" % Test,
+    libraryDependencies += "org.scalameta" %% "munit" % "1.0.4" % Test,
     // fork := true,
   )
