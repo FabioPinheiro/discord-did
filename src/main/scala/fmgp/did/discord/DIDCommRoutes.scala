@@ -26,7 +26,7 @@ object DIDCommRoutes {
         ret <- webSocketApp.toResponse
       } yield (ret)
     },
-    Method.POST / trailing -> handler { (req: Request) =>
+    Method.POST / "didcomm" / trailing -> handler { (req: Request) =>
       val SignedTyp = MediaTypes.SIGNED.typ
       val EncryptedTyp = MediaTypes.ENCRYPTED.typ
       // FIXME after https://github.com/zio/zio-http/issues/2416
