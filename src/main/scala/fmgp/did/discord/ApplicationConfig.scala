@@ -46,6 +46,7 @@ object ApplicationConfig {
   val configAgent = {
     Config
       .string("did")
+      .nested("identity")
       .mapOrFail(str =>
         DIDSubject.either(str) match
           case Left(value)  => Left(Config.Error.InvalidData(Chunk("did"), "Fail to parse the DID: " + value.error))
@@ -56,7 +57,8 @@ object ApplicationConfig {
           Config.Fallback[PrivateKeyWithKid](Config.derived[OKPPrivateKeyWithKid], Config.derived[ECPrivateKeyWithKid])
         )
         .map(keys => KeyStore(keys.toSet))
-        .nested("keyStore") ++
+        .nested("keyStore")
+        .nested("identity") ++
       Config
         .string("endpoint")
         .nested("service") ++

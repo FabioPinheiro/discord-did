@@ -1,0 +1,4 @@
+# For the sbt-dotenv plugin
+# https://github.com/Philippus/sbt-dotenv?tab=readme-ov-file#illegal-reflective-access-warnings-and-exceptions
+-J--add-opens=java.base/java.util=ALL-UNNAMED
+-J--add-opens=java.base/java.lang=ALL-UNNAMED

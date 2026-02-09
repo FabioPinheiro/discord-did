@@ -39,15 +39,17 @@ import fmgp.did.comm.*
 
 //Discord example https://github.com/bbarker/diz/blob/main/src/main/scala/Main.scala
 object DiscordDID extends ZIOAppDefault {
-  val token = "MTE3MDQ0MjMyOTg4MzE2ODc4OA.GSVRDi.IMZNQo1TgcF7n5jG3YV7TH8OqaWZbisN-0r4YU" // DID
-  // val token = "ODEwNjAwNTk5OTg0NjY4NzEz.Gn7Qu_.qvz0_FqLRhiQIEW0npnaHdMvonmyzI3Ayqgqu8" // GH3
 
   def botDiscordProgram =
     for {
       agent <- ZIO.service[ApplicationAgent]
+      config <- ZIO.service[ApplicationConfig]
       jda <- ZIO.succeed {
         JDABuilder
-          .createLight(token, Seq().asJava) // EnumSet.of(GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT))
+          .createLight(
+            config.discordToken,
+            Seq().asJava
+          ) // EnumSet.of(GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT))
           .addEventListeners(new SlashCommandListener(agent))
           .addEventListeners(new MessageReceiveListener())
           .build()
@@ -115,9 +117,8 @@ object DiscordDID extends ZIOAppDefault {
       configs = ConfigProvider.fromResourcePath()
 
       applicationConfig <- ZIO
-        .config(ApplicationConfig.configAgent.nested("identity"))
+        .config(ApplicationConfig.configAgent)
         .provideLayer(ZLayer.succeed(configs))
-      port <- configs.nested("http").nested("server").load(Config.int("port"))
 
       _ <- ZIO.log(s"Application started")
       _ <- ZIO.log(s"Application Config: ${applicationConfig}")
@@ -126,11 +127,14 @@ object DiscordDID extends ZIOAppDefault {
       botAgent = BotDidAgent(applicationConfig.did, applicationConfig.keyStore)
       botAgentLayer = ZLayer(ZIO.succeed(botAgent))
 
-      myServer <- botAgentProgram(port)
+      myServer <- botAgentProgram(applicationConfig.port)
         .provideSomeLayer(Scope.default >>> ((botAgentLayer ++ transportFactory) >>> OperatorImp.layer))
         .provideSomeLayer(Operations.layerOperations ++ botAgentLayer)
 
-      jda <- botDiscordProgram.provideEnvironment(ZEnvironment(agent))
+      jda <- botDiscordProgram
+        .provideEnvironment(
+          ZEnvironment(agent) ++ ZEnvironment(applicationConfig)
+        )
 
       // ### Shutdown ###
       _ <- Console.readLine("Enter to Shutdown")

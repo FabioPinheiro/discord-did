@@ -37,8 +37,15 @@ docs-build/**
 *.tmp
 ~*
 
+# secrets
+.env
+
 #vite 
 vite/dev-dist/
 
 #lixo
 lixo
+
+# tmp
+RedirectApp/
+chrome-extension/
