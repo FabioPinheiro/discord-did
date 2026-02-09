@@ -1,7 +1,7 @@
 // val scala3Version = "3.7.2"
 inThisBuild(
   Seq(
-    scalaVersion := "3.3.6", // Also update docs/publishWebsite.sh and any ref to scala-3.3.6
+    scalaVersion := "3.3.7", // Also update docs/publishWebsite.sh and any ref to scala-3.3.6
   )
 )
 
