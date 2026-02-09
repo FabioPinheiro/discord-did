@@ -53,7 +53,7 @@ inThisBuild(
 lazy val V = new {
   val scalajsJavaSecureRandom = "1.0.0"
   val munit = "1.1.1"
-  val zio = "2.1.20"
+  val zio = "2.1.24"
   val zioHttp = "3.4.0"
   val zioConfig = "4.0.6"
   val jda = "6.0.0-rc.2" // "5.6.1"
