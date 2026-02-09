@@ -25,6 +25,7 @@ jobs:
         #https://github.com/crazy-max/ghaction-import-gpg
         uses: crazy-max/ghaction-import-gpg@v6
         with:
+          # gpg --armor --export-secret-keys fabiomgpinheiro+Scala-Steward@gmail.com | pbcopy
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           # passphrase: ${{ secrets.PASSPHRASE }}
           git_config_global: true
@@ -47,4 +48,5 @@ jobs:
           author-email: ${{ steps.import_gpg.outputs.email }}
           author-name: ${{ steps.import_gpg.outputs.name }}
           sign-commits: true
+          # gpg --list-secret-keys --keyid-format=long
           signing-key: ${{ secrets.GPG_SIGNING_KEY_ID }}
