@@ -34,7 +34,7 @@ object CurveConfig {
       case "P-384"     => Right(Curve.`P-384`)
       case "P-521"     => Right(Curve.`P-521`)
       case "secp256k1" => Right(Curve.secp256k1)
-      case other =>
+      case other       =>
         Left(
           Config.Error.InvalidData(message = s"Invalid EC curve: $other. Expected P-256, P-384, P-521, or secp256k1")
         )
