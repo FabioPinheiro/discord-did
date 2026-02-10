@@ -96,6 +96,6 @@ lazy val root = project
       D.didPrism.value,
       D.didPeer.value,
     ),
-    libraryDependencies += "org.scalameta" %% "munit" % "1.0.4" % Test,
+    libraryDependencies += "org.scalameta" %% "munit" % "1.2.2" % Test,
     // fork := true,
   )
