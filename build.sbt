@@ -56,7 +56,7 @@ lazy val V = new {
   val zio = "2.1.24"
   val zioHttp = "3.4.1"
   val zioConfig = "4.0.6"
-  val jda = "6.0.0" // "5.6.1"
+  val jda = "6.3.0" // "5.6.1"
   val scalaDID = "0.1.0-M35"
 }
 lazy val D = new {
